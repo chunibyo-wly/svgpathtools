@@ -5,7 +5,7 @@
 # External dependencies
 from __future__ import division, absolute_import, print_function
 import os
-from xml.etree.ElementTree import iterparse, Element, ElementTree, SubElement
+from xml.etree.ElementTree import iterparse, Element, ElementTree, SubElement, indent
 import numpy as np
 
 # Internal dependencies
@@ -83,7 +83,8 @@ class SaxDocument:
                 if "style" in attrs:
                     for equate in attrs["style"].split(";"):
                         equal_item = equate.split(":")
-                        values[equal_item[0]] = equal_item[1]
+                        if len(equal_item) == 2:
+                            values[equal_item[0]] = equal_item[1]
                 if "transform" in attrs:
                     transform_matrix = parse_transform(attrs["transform"])
                     if matrix is None:
@@ -140,7 +141,7 @@ class SaxDocument:
             flat.append((pathd, matrix))
         return flat
 
-    def generate_dom(self):
+    def generate_dom(self, target = None):
         root = Element(NAME_SVG)
         root.set(ATTR_VERSION, VALUE_SVG_VERSION)
         root.set(ATTR_XMLNS, VALUE_XMLNS)
@@ -183,13 +184,21 @@ class SaxDocument:
             if ATTR_FILL in values:
                 path.set(ATTR_FILL, values[ATTR_FILL])
             if ATTR_STROKE in values:
+                if target is not None and values[ATTR_STROKE] != target:
+                    path.set("visibility", "hidden")
+                else:
+                    path.set("visibility", "visible")
                 path.set(ATTR_STROKE, values[ATTR_STROKE])
+            else:
+                path.set("visibility", "hidden")
+
         return ElementTree(root)
 
-    def save(self, filename):
+    def save(self, filename, target=None):
         with open(filename, 'wb') as output_svg:
-            dom_tree = self.generate_dom()
-            dom_tree.write(output_svg)
+            dom_tree = self.generate_dom(target=target)
+            indent(dom_tree, space="\t", level=0)
+            dom_tree.write(output_svg, encoding='utf-8', method='xml')
 
     def display(self, filename=None):
         """Displays/opens the doc using the OS's default application."""
